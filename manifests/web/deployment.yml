@@ -1,0 +1,29 @@
+# A Deployment file is a configuration file
+# that lets you specify the desired state of a Kubernetes cluster (your running pods).
+# It is used to create, delete, update deploymens of your application (pods, containers)
+
+# Specifies the Kubernetes API version
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener-web
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: url-shortener-web
+  template:
+    metadata:
+      labels:
+        app: url-shortener-web
+    spec:
+      containers:
+      - name: web
+        image: devopsdee/url-shortener-web:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: REDIS_URL
+          value: "redis://url-shortener-redis:6379/0"
+        command: ["python", "web/app.py"]
