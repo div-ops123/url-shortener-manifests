@@ -1,0 +1,14 @@
+# Exposes app via ALB for external access
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-web
+  namespace: default
+spec:
+  selector:
+    app: url-shortener-web
+  ports:
+  - port: 80  # External port
+    targetPort: 5000  # Container port
+  type: LoadBalancer  # Creates ALB resource in AWS
