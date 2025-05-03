@@ -1,0 +1,77 @@
+# This StatefulSet file defines the desired state for running Redis in your Kubernetes cluster.
+# It manages pods with persistent storage and stable identities, ideal for stateful applications like databases.
+################################################################################################################
+
+
+# Specifies the Kubernetes API version for this resource
+apiVersion: apps/v1
+# Specifies the type of Kubernetes resource
+# 'StatefulSet' is used for applications requiring stable network identities and persistent storage.
+kind: StatefulSet
+# 'metadata' provides identification information for this StatefulSet
+metadata:
+  name: url-shortener-redis
+  namespace: default
+# Defines the desired state of the StatefulSet
+spec:
+  # Associates this StatefulSet with a Service for stable network identity.
+  # Must match the name of a corresponding headless Service (defined separately).
+  serviceName: url-shortener-redis
+  replicas: 1
+  # 'selector' specifies which pods this StatefulSet manages
+  selector:
+    # maches pods with label 'app: url-shortener-redis'
+    matchLabels:
+      app: url-shortener-redis
+  # 'template' defines blueprint for creating new pods managed by this StatefulSet
+  template:
+    # Identification information for pods created by this StatefulSet
+    metadata:
+      # labels applied to each pod; must match 'selector' above
+      labels:
+        app: url-shortener-redis
+    # Specification for the pod's containers and configuration
+    spec:
+      # List of containers to run in each pod
+      containers:
+      - name: redis
+        # Docker image to pull and run (Redis 6.2 from Docker Hub)
+        image: redis:6.2
+        # Overrides the default command to enable append-only mode for data persistence.
+        # '--appendonly yes' ensures Redis logs every write to disk.
+        command: ["redis-server", "--appendonly", "yes"]
+        # Ports exposed by the container for communication
+        ports:
+        - # Port redis listens on inside the container
+          containerPort: 6379
+        # Specifies where the EBS volume is attached in the container for persistent storage
+        volumeMounts:
+        - # Name of the volume, matches the volumeClaimTemplate below
+          name: redis-data
+          # Mounts the EBS volume at /data in the Redis container, where redis stores its data
+          mountPath: /data
+
+  # 'volumeClaimTemplates' defines persistent storage for each pod managed by this StatefulSet
+  # Creates a PersistentVolumeClaim (PVC) per Redis replica with a stable name.
+  # Requests the EBS volume and ties it to the StorageClass
+  volumeClaimTemplates:
+  - # Identification information for the PVC
+    metadata:
+      # Name of the PVC, prefixed with the StatefulSet name (e.g., redis-data-url-shortener-redis-0)
+      name: redis-data
+    # Specification for the storage request
+    spec:
+      # Access mode for the volume.
+      # 'ReadWriteOnce' allows one node to read/write (suitable for single Redis)
+      accessModes: ["ReadWriteOnce"]
+      # Triggers the CSI driver to create the EBS volume.
+      # Specifies the StorageClass to use for provisioning the PersistentVolume (PV).
+      # "ebs-sc" is defined via Terraform and uses the AWS EBS CSI driver (ebs.csi.aws.com) to dynamically create a 1Gi EBS volume in AWS.
+      # This volume is then bound to the PVC
+      # (redis-data-url-shortener-redis-0) and attached to the node where the Redis pod runs.
+      storageClassName: "ebs-sc"
+      # Resource request for storage
+      resources:
+        requests:
+          # Requests 1 gigabyte of storage for Redis data
+          storage: 1Gi  # Size for redis data

@@ -1,0 +1,57 @@
+# It manages a stateless background process that pulls and processes jobs from a Redis queue
+############################################################################################
+
+
+# Specifies the Kubernetes API version for this resource.
+# 'apps/v1' is the stable API group for Deployments.
+apiVersion: apps/v1
+# Specifies the type of Kubernetes resource
+kind: Deployment
+# Identification information for this Deployment resource
+metadata:
+  name: url-shortener-worker
+  namespace: default
+# Defines the desired state of the cluster for this Deployment
+spec:
+  # Specifies the number of worker instances to run
+  replicas: 1
+  # 'selector' defines how the Deployment identifies the pods to manage
+  selector:
+    matchLabels:
+      app: url-shortener-worker
+  # 'template' defines the blueprint for creating new pods
+  template:
+    # Identification information for new pods
+    metadata:
+      labels:
+        app: url-shortener-worker
+    # Speification for the pod's continers and configuration
+    spec:
+      # List of containers to run in a pod
+      containers:
+      - name: worker
+        # The Docker image to pull and run, hosted on Docker Hub
+        image: devopsdee/url-shortener-worker
+        # Defines a readiness probe to check if the container is ready to process traffic/jobs.
+        # Ensures the worker only starts when it can connect to Redis.
+        readinessProbe:
+          # Executes a command inside the container to test readiness.
+          exec:
+            # Command runs 'redis-cli ping' to check Redis connectivity.
+            # '-h url-shortener-redis' targets the Redis Service DNS name.
+            # Expects 'PONG' response if Redis is reachable.
+            command: ["redis-cli", "-h", "url-shortener-redis", "ping"]
+          # Waits 5 seconds after container start to allow initialization, before first readinessProbe runs
+          initialDelaySeconds: 5
+          # How often the probe runs (in seconds).
+          # Checks every 10 seconds to confirm ongoing readiness.
+          periodSeconds: 10
+        # Environment variables passed to the container
+        env:
+        - name: REDIS_URL
+          # Value specifies the Redis connection string.
+          # 'redis://url-shortener-redis:6379/0' uses the Redis Service DNS to connect to the Redis pod.
+          value: "redis://url-shortener-redis:6379/0"
+        # Overrides the default command in the Dockerfile’s CMD (if needed).
+        # 'rq worker' starts the RQ worker process to process jobs from the Redis queue.
+        command: ["rq", "worker"]

@@ -1,0 +1,37 @@
+# This Service file defines a networking endpoint for the Redis pods managed by the StatefulSet.
+# It provides a stable DNS name for your application (e.g., web pods) to connect to Redis,
+# and as a headless service, it enables direct access to individual Redis pods.
+#################################################################################################
+
+
+# Specifies the Kubernetes API version for this resource.
+# 'v1' is the stable API group for core resources like Services.
+apiVersion: v1
+# Specifies the type of Kubernetes resource
+# 'Service' manages networking and pods exposure, providing a consistent way to access them
+kind: Service
+# Identification information for this Service
+metadata:
+  # This becomes the DNS name (e.g., url-shortener-redis.default.svc.cluster.local) used by clients.
+  name: url-shortener-redis
+  namespace: default
+# Defines the desired networking behaviour for the Service
+spec:
+  # 'selector' defines which pods this Service routes traffic to.
+  # Matches pods with the label 'app: url-shortener-redis', managed by the Redis StatefulSet.
+  selector:
+    app: url-shortener-redis
+  # Ports for accessing Redis
+  ports:
+  - # External port exposed by the Service
+    # Clients (e.g., web pods) connect to this port (6379) via the Service DNS name.
+    port: 6379
+    # Port on the container where traffic is sent
+    # Matches the Redis container’s listening port (6379) from the StatefulSet.
+    targetPort: 6379
+
+  # Makes this a headless Service by disabling the cluster IP.
+  # 'None' means no load balancing or single IP; instead, DNS resolves directly to pod IPs.
+  clusterIP: None
+  # Purpose: Allows direct access to individual Redis pods (e.g., url-shortener-redis-0) via DNS,
+  # which is critical for stateful applications like Redis that need stable identities.

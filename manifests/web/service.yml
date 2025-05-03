@@ -1,14 +1,34 @@
-# Exposes app via ALB for external access
+# This Service file defines how your application(url shortener Frontend) is exposed within and outside the Kubernetes cluster
+# It creates an AWS Load Balancer(ALB) to allow external access to your Flask app over the internet
+###################################################################################################
 
+
+# Specifies the Kubernetes API for this resource
 apiVersion: v1
+# Specifies the type of Kubernetes resource
+# 'Service' provides an endpoint for access
 kind: Service
+# 'metadata' provides Identification Information about the Service
 metadata:
   name: url-shortener-web
+  # 'namespce' where the service will be created
   namespace: default
+# 'spec' defines the desired networking behaviour for exposing tha pods
 spec:
+  # 'selector' identifies which pods this Service route traffic to
   selector:
+    # Uses the same labels in Deployment selector to find those pods/containers to route traffic to them.
+    # pods deployed having this key-value pair would use this networking Service
     app: url-shortener-web
+  # Defines which ports application(pods) can be accessed with
   ports:
-  - port: 80  # External port
-    targetPort: 5000  # Container port
-  type: LoadBalancer  # Creates ALB resource in AWS
+    # External port exposed by the service
+  - port: 80  
+    # Port on the pod/container where the traffic is sent to
+    # Matches the Flask app’s listening port (5000) from the Deployment.
+    targetPort: 5000
+  # 'type': Specifies the type of Service
+  # 'LoadBalancer' exposes the Service externally using a cloud provider’s load balancer (AWS ALB in this case).
+  type: LoadBalancer
+  # Note: In AWS, this creates an Application Load Balancer (ALB) or Network Load Balancer (NLB),
+  # depending on annotations or the AWS Load Balancer Controller configuration.

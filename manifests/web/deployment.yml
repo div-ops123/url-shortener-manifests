@@ -1,35 +1,53 @@
 # A Deployment file is a configuration file
-# that lets you specify the desired state of a Kubernetes cluster (your running pods).
-# It is used to create, delete, update deployments of your application (pods, containers)
+# that lets you specify the desired state of a Kubernetes cluster (your running pods)
+# It is used to manage the lifecycle of your application's pods (create, delete, update, scale)
+#########################################################################################
 
 
 # Specifies the Kubernetes API version
 apiVersion: apps/v1
 # Specifies the type of Kubernetes resource
+# 'Deployment' manages a set of pods nd ensures they match the desired state
 kind: Deployment
+# 'metadata' provides Identification Information about the Deployment
 metadata:
   name: url-shortener-web
   namespace: default
-# Defines desired state of cluster
+# Defines desired state of the cluster for this Deployment
 spec:
-  # Specified that you want 2 replicas of your app running
+  # Specified the number of pod replicas(instances) you want running at all times
   replicas: 2
-  # 
+  # Tells the Deployment which pods it should manage
   selector:
+    # 'matchLabels' specified the key-value pairs that pods mush have to be managed by this Deployment
     matchLabels:
       app: url-shortener-web
-  # Template used for creating new pods
+  # 'template' defines the blueprint used for creating new pods managed by this Deployment
   template:
     metadata:
+      # Labels applied to each pod; must match the 'selector' above for the Deployment to manage them.
       labels:
         app: url-shortener-web
+    # Specification for the pod's containers and their configuration
     spec:
+      # List of containers to run in each pod
       containers:
       - name: web
+        # Docker image to pull and run, hosted on DockerHub
         image: devopsdee/url-shortener-web:latest
         ports:
+        # Port your app listens on inside the container
         - containerPort: 5000
+        # Environment variables passed to the container
         env:
-        - name: REDIS_URL
-          value: "redis://url-shortener-redis:6379/0" # Internal Redis service DNS
-        command: ["python", "web/app.py"]      # Matches docker-compose
+        - # This environment variable tells each `web` pod (running your Flask app) 
+          # where to find the Redis instance
+          name: REDIS_URL
+          # Uses the Internal Kubernetes service DNS for Redis
+          # - **`redis://url-shortener-redis:6379/0`**:
+          #   - `url-shortener-redis`: The name of the Redis `Service` (from `redis/service.yml`).
+          #   - `6379`: The port exposed by the Redis pod and mapped by the `Service`.
+          #   - `/0`: The Redis database number (default is 0).
+          value: "redis://url-shortener-redis:6379/0"
+        # Matches your docker-compose.yml to run the app
+        command: ["python", "web/app.py"]      
